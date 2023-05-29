@@ -33,27 +33,36 @@ for i in range(1,101):
     cov_cols = data.filter(n)
 
     t = data["EXPOSURE{}".format(i)]
+    
+    #tune on 50% of data
+    X_train, X_test, y_train, y_test = train_test_split(cov_cols, t, test_size = 0.5, stratify = t, random_state = 43)
 
-   X_train, X_test, y_train, y_test = train_test_split(cov_cols, t, test_size = 0.5, stratify = t, random_state = 43)
-
+    #fit reference method, with all confounders
     logmod_con = LogisticRegression(penalty='none',solver='lbfgs', max_iter=1000)
     
     logmod_con.fit(conf_cols, t)
 
+    #create 10 fold CV for all data drive methods
+    folds = 10
 
+    skf = StratifiedKFold(n_splits=folds, shuffle=True, random_state=1001)
+    
+    #-------------LASSO-------------
     logistic = LogisticRegression(penalty='l1', max_iter=1000)
     
     alphas = np.arange(0.01, 0.31, 0.02)
     
     hyperparameters = dict(C=alphas,solver=['liblinear','saga'])
     
-    clf_ps = RandomizedSearchCV(estimator = logistic, param_distributions = hyperparameters, cv=5, verbose=0,
+    clf_ps = RandomizedSearchCV(estimator = logistic, param_distributions = hyperparameters, 
+                                cv=skf.split(X_train, y_train), verbose=0,
                                 scoring='neg_brier_score', n_iter=100)
     
     logmod_ps = clf_ps.fit(X_train, y_train)
 
     logmod_ps.fit(cov_cols, t)
 
+    #-------------MLP-------------
     def build_classifier(optimizer, kernel, units, hidden_layers, activation):
         classifier = Sequential()
         # First Hidden Layer
@@ -75,10 +84,6 @@ for i in range(1,101):
 
     nn_model_ps = KerasClassifier(build_fn=build_classifier)
 
-    folds = 10
-    
-    skf = StratifiedKFold(n_splits=folds, shuffle=True, random_state=1001)
-
     para_nn = {'batch_size': [10, 32, 64],
                'epochs': [10, 100, 1000],
                'optimizer': ['adam', 'rmsprop', 'SGD'],
@@ -88,13 +93,15 @@ for i in range(1,101):
                "activation": ['tanh', 'sigmoid','relu', 'selu']}
 
     random_search_nn_ps = RandomizedSearchCV(estimator=nn_model_ps,
-                                    param_distributions =para_nn,
-                                    cv=skf.split(X_train, y_train),
-                                    return_train_score=True,
-                                    scoring='neg_brier_score', n_iter=100)
+                                             param_distributions =para_nn,
+                                             cv=skf.split(X_train, y_train),
+                                             return_train_score=True,
+                                             scoring='neg_brier_score', 
+                                             n_iter=100)
 
     random_search_nn_ps.fit(cov_cols, t)
 
+    #-------------XgBoost-------------
     xgb_m = xgb.XGBClassifier(n_jobs=1, objective= 'binary:logistic') 
     
     para_xgb = {
@@ -106,8 +113,11 @@ for i in range(1,101):
         'max_depth': [3, 5, 7, 12]
     }
 
-    random_search_xgb_ps = RandomizedSearchCV(xgb_m, param_distributions=para_xgb, scoring='neg_brier_score',
-                                       cv=skf.split(X_train, y_train), verbose=3, n_iter=100) 
+    random_search_xgb_ps = RandomizedSearchCV(xgb_m, 
+                                              param_distributions=para_xgb, 
+                                              scoring='neg_brier_score',
+                                              cv=skf.split(X_train, y_train),
+                                              verbose=3, n_iter=100) 
 
     random_search_xgb_ps.fit(cov_cols, t)
 
