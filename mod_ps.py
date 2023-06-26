@@ -18,6 +18,7 @@ from sklearn.model_selection import train_test_split
 
 for i in range(1,101):
     conf_list = pd.read_csv("D:/plasmode/conf_list.csv", index_col=0)
+    
     cov_list = pd.read_csv("D:/plasmode/cov_list.csv", index_col=0)
     
     simdata = pd.read_csv("D:/plasmode/data_{}.csv".format(i), index_col=0)
@@ -78,7 +79,7 @@ for i in range(1,101):
         # Output Layer
         classifier.add(Dense(1, activation='sigmoid', kernel_initializer=kernel))
         # Compiling the neural network
-        classifier.compile(optimizer=optimizer, loss='binary_crossentropy', metrics=['accuracy'])
+        classifier.compile(optimizer=optimizer, loss='mean_squared_error', metrics=['accuracy'])
         return classifier
 
 
@@ -102,7 +103,7 @@ for i in range(1,101):
     random_search_nn_ps.fit(cov_cols, t)
 
     #-------------XgBoost-------------
-    xgb_m = xgb.XGBClassifier(n_jobs=1, objective= 'binary:logistic') 
+    xgb_m = xgb.XGBClassifier(n_jobs=1, objective= 'binary:logistic', eval_metric = "rmse") 
     
     para_xgb = {
         'n_estimators': [1000, 600, 300, 100],
