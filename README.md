@@ -1,6 +1,6 @@
-# Machine learning methods for propensity score estimation: a cross validation hyperparameter tuning framework.
+# Use of machine learning to compare disease risk scores and propensity scores across complex confounding scenarios: a simulation study.
 
-This is a function including: logistic regression with pre-selected confounders, LASSO, MLP and XgBoost, to estimate propensity score.
+This is a package including logistic regression with pre-selected confounders, LASSO, MLP and XgBoost, to estimate propensity score and disease risk score.
 
 As data we are using is imbalanced on treatment, stratification was applied with splitting training and validation data for tuning. 
 
